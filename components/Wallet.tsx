@@ -15,7 +15,7 @@ import {
 
 interface WalletProps {
 	wallet: WalletType,
-	setSheetOpenIndex: (value: (((prevState: (number | null)) => (number | null)) | number | null)) => void,
+	setSheetOpenIndex: (index: number | null) => void,
 	deleteWallet: (index: number) => void,
 	walletNumber: number
 }
