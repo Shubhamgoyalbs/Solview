@@ -136,9 +136,9 @@ const Body = () => {
 	}
 
 	return (
-		<div className='py-2 px-4 h-full w-full'>
+		<div className='py-2 px-4 flex-1 w-full flex flex-col min-h-0'>
 			{ mnemonic ?
-				<div>
+				<div className="flex-1">
 					<div className='w-full overflow-y-auto h-full flex flex-col gap-3'>
 						<div className={isOpen ? 'my-2 rounded-lg border flex flex-col gap-4 px-8 py-7 cursor-pointer' : 'my-2 rounded-lg border flex flex-col gap-4 px-8 py-7'} onClick={async () => {
 							await navigator.clipboard.writeText(mnemonic);
@@ -157,7 +157,7 @@ const Body = () => {
 							</div>
 							{isOpen && (
 								<div>
-									<div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 my-6 w-full">
+									<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 my-6 w-full">
 										{mnemonic.split(' ').map((word, index) => (
 											<SecretPhraseWord key={index} word={word}/>
 										))}
@@ -172,7 +172,29 @@ const Body = () => {
 							<h2 className='text-2xl font-bold'>Wallets</h2>
 							<div className='flex gap-2'>
 								<Button size='lg' variant="outline" onClick={() => addWallet()}>Add Wallet</Button>
-								<Button size='lg' variant='destructive' onClick={clearWallets}>Clear All</Button>
+								<Dialog>
+									<DialogTrigger asChild>
+										<Button size='lg' variant='destructive'>Clear All</Button>
+									</DialogTrigger>
+									<DialogContent>
+										<DialogHeader>
+											<DialogTitle>Are you absolutely sure?</DialogTitle>
+											<DialogDescription>
+												This action cannot be undone. This will permanently delete all your wallets and recovery phrase.
+											</DialogDescription>
+										</DialogHeader>
+										<DialogFooter>
+											<DialogClose asChild>
+												<Button variant="outline">Cancel</Button>
+											</DialogClose>
+											<DialogClose asChild>
+												<Button variant="destructive" onClick={clearWallets}>
+													Clear All
+												</Button>
+											</DialogClose>
+										</DialogFooter>
+									</DialogContent>
+								</Dialog>
 							</div>
 						</div>
 						<div className='flex flex-col gap-6 mt-4'>
@@ -207,7 +229,7 @@ const Body = () => {
 					</div>
 				</div>
 				:
-				<div className='flex justify-center items-center h-full w-full'>
+				<div className='flex-1 flex justify-center items-center h-full w-full'>
 					<Empty>
 						<EmptyHeader>
 							<EmptyMedia variant="icon">
