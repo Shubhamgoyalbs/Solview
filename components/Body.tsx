@@ -6,6 +6,7 @@ import SecretPhrase from "@/components/SecretPhrase";
 import WalletList from "@/components/WalletList";
 import InitialState from "@/components/InitialState";
 import SwapSheet from "@/components/SwapSheet";
+import {WalletType} from "@/utils/types";
 
 const Body = () => {
 	const {
@@ -17,7 +18,7 @@ const Body = () => {
 		deleteWallet
 	} = useWallets();
 
-	const [sheetOpenIndex, setSheetOpenIndex] = useState<number | null>(null);
+	const [sheetOpenWallet, setSheetOpenWallet] = useState<WalletType | null>(null);
 
 	return (
 		<div className='py-2 px-4 flex-1 w-full flex flex-col min-h-0'>
@@ -25,18 +26,18 @@ const Body = () => {
 				<div className="flex-1">
 					<div className='w-full overflow-y-auto h-full flex flex-col gap-3'>
 						<SecretPhrase mnemonic={mnemonic} />
-						
-						<WalletList 
+
+						<WalletList
 							wallets={wallets}
 							addWallet={addWallet}
 							clearWallets={clearWallets}
 							deleteWallet={deleteWallet}
-							setSheetOpenIndex={setSheetOpenIndex}
+							setSheetOpenWallet={setSheetOpenWallet}
 						/>
 
-						<SwapSheet 
-							sheetOpenIndex={sheetOpenIndex} 
-							setSheetOpenIndex={setSheetOpenIndex} 
+						<SwapSheet
+							sheetOpenWallet={sheetOpenWallet}
+							setSheetOpenWallet={setSheetOpenWallet}
 						/>
 					</div>
 				</div>

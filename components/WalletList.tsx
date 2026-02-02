@@ -18,15 +18,15 @@ interface WalletListProps {
     addWallet: () => void;
     clearWallets: () => void;
     deleteWallet: (index: number) => void;
-    setSheetOpenIndex: (index: number | null) => void;
+    setSheetOpenWallet: (wallet: WalletType | null) => void;
 }
 
-const WalletList = ({ 
-    wallets, 
-    addWallet, 
-    clearWallets, 
-    deleteWallet, 
-    setSheetOpenIndex 
+const WalletList = ({
+    wallets,
+    addWallet,
+    clearWallets,
+    deleteWallet,
+    setSheetOpenWallet
 }: WalletListProps) => {
     return (
         <>
@@ -61,11 +61,11 @@ const WalletList = ({
             </div>
             <div className='flex flex-col gap-6 mt-4'>
                 {wallets.map((wallet, index) => (
-                    <Wallet 
-                        key={wallet.id} 
-                        wallet={wallet} 
-                        setSheetOpenIndex={setSheetOpenIndex} 
-                        walletNumber={index + 1} 
+                    <Wallet
+                        key={wallet.id}
+                        wallet={wallet}
+                        setSheetOpenWallet={setSheetOpenWallet}
+                        walletNumber={index + 1}
                         deleteWallet={deleteWallet}
                     />
                 ))}

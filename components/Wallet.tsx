@@ -15,7 +15,7 @@ import {
 
 interface WalletProps {
 	wallet: WalletType,
-	setSheetOpenIndex: (index: number | null) => void,
+	setSheetOpenWallet: (wallet: WalletType | null) => void,
 	deleteWallet: (index: number) => void,
 	walletNumber: number
 }
@@ -69,7 +69,7 @@ const Wallet = (props: WalletProps) => {
 					</div>
 					<div className='flex justify-center items-center w-12 flex-shrink-0'>
 						<Button size='lg' className='bg-[#fafafa] text-black px-8 h-10' onClick={() => {
-							props.setSheetOpenIndex(props.walletNumber)
+							props.setSheetOpenWallet(props.wallet)
 						}}>View</Button>
 					</div>
 				</div>
