@@ -10,6 +10,15 @@ import { toast } from "sonner";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {Spinner} from "@/components/ui/spinner";
+import {
+	Connection,
+	Keypair,
+	SystemProgram,
+	LAMPORTS_PER_SOL,
+	Transaction,
+	sendAndConfirmTransaction,
+	PublicKey
+} from "@solana/web3.js";
 
 interface SwapSheetProps {
 	sheetOpenWallet: WalletType | null;
@@ -121,12 +130,47 @@ const SwapSheet = ({ sheetOpenWallet, setSheetOpenWallet }: SwapSheetProps) => {
 		}
 	};
 
-	const handleTokenSend = async () => {
+	const handleSolanaSend = async () => {
 		setIsSendingToken(true);
-		setTimeout(() => {
-			toast.success('token transferred successfully')
-			setIsSendingToken(false)
-		}, 4000)
+		const isValidPublicKey = PublicKey.isOnCurve(new PublicKey(recipientPublicKey).toBytes());
+		if (data!.sol.tokenAmount < sendAmount){
+			toast.error('Insufficient balance');
+			return;
+		}
+		if (sendAmount <= 0){
+			toast.error('Amount must greater than 0');
+			return;
+		}
+		if(!isValidPublicKey){
+			toast.error('Public must a valid key');
+			return;
+		}
+		const fromKeypair = Keypair.fromSecretKey(new PublicKey(sheetOpenWallet!.publicKey).toBytes());
+		const lamportsToSend = 1_000_000;
+
+		try {
+			const connection = new Connection("http://localhost:8899", "confirmed");
+
+			const transferTransaction = new Transaction().add(
+				SystemProgram.transfer({
+					fromPubkey: fromKeypair.publicKey,
+					toPubkey: new PublicKey(recipientPublicKey),
+					lamports: lamportsToSend * sendAmount
+				})
+			);
+
+			const signature = await sendAndConfirmTransaction(
+				connection,
+				transferTransaction,
+				[fromKeypair]
+			);
+			toast.success('Solana transferred successfully')
+		}catch (e){
+			console.log('Error while transfer: ' + e);
+			toast.error('Error while transfer! try again')
+		}finally {
+			setLoading(false);
+		}
 	}
 
 	return (
@@ -190,7 +234,7 @@ const SwapSheet = ({ sheetOpenWallet, setSheetOpenWallet }: SwapSheetProps) => {
 							/>
 						</div>
 						<div className='w-full h-full border rounded-md flex flex-col justify-between gap-3 px-3 py-4'>
-							<p className='font-semibold text-lg text-center mb-3'>Send Token</p>
+							<p className='font-semibold text-lg text-center mb-3'>Send Solana</p>
 							<div className='w-full flex gap-3'>
 								<div className="flex flex-col gap-1.5 flex-1">
 									<Label htmlFor="publicKey">Public Key</Label>
@@ -211,13 +255,14 @@ const SwapSheet = ({ sheetOpenWallet, setSheetOpenWallet }: SwapSheetProps) => {
 										className='w-full focus-visible:ring-0 focus-visible:outline-0'
 										value={sendAmount}
 										onChange={(e) => {
-											setSendAmount(parseFloat(e.target.value));
+											const val = parseFloat(e.target.value);
+											setSendAmount(isNaN(val) ? 0 : val);
 										}}
 									/>
 								</div>
 							</div>
 							<Button variant="default" className="w-full"
-								onClick={handleTokenSend}
+								onClick={handleSolanaSend}
 				        disabled={isSendingToken}
 							>
 								{isSendingToken && <Spinner data-icon="inline-start" />}
