@@ -33,7 +33,7 @@ const WalletList = ({
             <div className='flex justify-between items-center my-2'>
                 <h2 className='text-2xl font-bold'>Wallets</h2>
                 <div className='flex gap-2'>
-                    <Button size='lg' variant="outline" onClick={() => addWallet()}>Add Wallet</Button>
+                    <Button size='lg' variant="outline" onClick={addWallet}>Add Wallet</Button>
                     <Dialog>
                         <DialogTrigger asChild>
                             <Button size='lg' variant='destructive'>Clear All</Button>

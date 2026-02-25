@@ -15,8 +15,38 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Solview",
-  description: "A web based wallet on SOLANA chain",
+	title: {
+		default: "Solview - Web-Based Solana Wallet",
+		template: "%s | Solview"
+	},
+	description: "Secure web-based wallet for Solana blockchain. Send, swap, and manage SOL tokens with ease. No downloads required - access your crypto wallet directly from your browser.",
+	keywords: [
+		"Solana wallet",
+		"web3 wallet",
+		"crypto wallet",
+		"SOL token",
+		"blockchain wallet",
+		"Solana swap",
+		"send crypto",
+		"web-based wallet",
+		"decentralized wallet"
+	],
+	authors: [{ name: "Shubham goyal" }],
+	creator: "Solview",
+	publisher: "Solview",
+	metadataBase: new URL("https://solview07.vercel.app"),
+
+	robots: {
+		index: true,
+		follow: true,
+		googleBot: {
+			index: true,
+			follow: true,
+			"max-video-preview": -1,
+			"max-image-preview": "large",
+			"max-snippet": -1,
+		},
+	},
 };
 
 export default function RootLayout({

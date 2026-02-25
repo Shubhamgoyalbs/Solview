@@ -5,13 +5,11 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { TokenType, WalletType } from "@/utils/types";
 import SheetTokenCard from "@/components/SheetTokenCard";
-import axios from "@/utils/axios";
 import { toast } from "sonner";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {Spinner} from "@/components/ui/spinner";
 import {
-	Connection,
 	Keypair,
 	SystemProgram,
 	LAMPORTS_PER_SOL,
@@ -19,6 +17,16 @@ import {
 	sendAndConfirmTransaction,
 	PublicKey
 } from "@solana/web3.js";
+import {heliusClient, connection, getTokenBalance, getTokenPrice, mintId, isValidSolanaAddress} from "@/utils/sol";
+import bs58 from "bs58";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger
+} from "@/components/ui/dialog";
 
 interface SwapSheetProps {
 	sheetOpenWallet: WalletType | null;
@@ -36,6 +44,39 @@ const SwapSheet = ({ sheetOpenWallet, setSheetOpenWallet }: SwapSheetProps) => {
 	const [sendAmount, setSendAmount] = useState(0.0)
 	const [isSendingToken, setIsSendingToken] = useState(false)
 
+	const fetchData = async () => {
+		if (!sheetOpenWallet) return;
+		setLoading(true);
+
+		try {
+			const solPrice = await getTokenPrice(mintId.sol);
+			const usdcPrice = await getTokenPrice(mintId.usdc);
+			const usdtPrice = await getTokenPrice(mintId.usdt);
+
+			const solBalance = await heliusClient.wallet.getBalances({
+				wallet: sheetOpenWallet.publicKey
+			}).then((data) => {
+				return (data.balances[0]?.balance || 0) / 1e9;
+			})
+
+			const usdcAmount = await getTokenBalance(mintId.usdc, sheetOpenWallet.publicKey);
+			const usdtAmount = await getTokenBalance(mintId.usdt, sheetOpenWallet.publicKey);
+
+			setData({
+				sol: { tokenPrice: solPrice, tokenAmount: solBalance },
+				usdt: { tokenPrice: usdtPrice, tokenAmount: usdtAmount },
+				usdc: { tokenPrice: usdcPrice, tokenAmount: usdcAmount }
+			});
+		} catch (error: any) {
+			console.log('Error: ' + error);
+			const errorMessage = error.message || "Error fetching data";
+			setSheetOpenWallet(null);
+			toast.error(`Error: ${errorMessage}`);
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	useEffect(() => {
 		if (sheetOpenWallet) {
 			fetchData();
@@ -45,85 +86,6 @@ const SwapSheet = ({ sheetOpenWallet, setSheetOpenWallet }: SwapSheetProps) => {
 		}
 	}, [sheetOpenWallet]);
 
-	const fetchData = async () => {
-		if (!sheetOpenWallet) return;
-		setLoading(true);
-
-		const alchemyUrl = process.env.NEXT_PUBLIC_SOL_RPC_URL || '';
-		const alchemyApiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || '';
-
-		if (!alchemyApiKey) {
-			console.error('NEXT_PUBLIC_ALCHEMY_API_KEY is not defined');
-			toast.error("Server error");
-			setLoading(false);
-			return;
-		}
-
-		try {
-			const priceResult = await axios.get(
-				'https://api.g.alchemy.com/prices/v1/tokens/by-symbol?symbols=SOL&symbols=USDC&symbols=USDT',
-				{
-					headers: {
-						'Accept': 'application/json',
-						'Authorization': `Bearer ${alchemyApiKey}`
-					}
-				}
-			);
-
-			const prices = priceResult.data.data;
-			const solPrice = parseFloat(prices.find((p: any) => p.symbol === 'SOL')?.prices[0]?.value || "0");
-			const usdcPrice = parseFloat(prices.find((p: any) => p.symbol === 'USDC')?.prices[0]?.value || "0");
-			const usdtPrice = parseFloat(prices.find((p: any) => p.symbol === 'USDT')?.prices[0]?.value || "0");
-
-			const balanceResponse = await axios.post(alchemyUrl, {
-				jsonrpc: "2.0",
-				id: 1,
-				method: "getBalance",
-				params: [sheetOpenWallet.publicKey]
-			});
-
-			const solBalance = balanceResponse.data.result.value / 1e9;
-
-			const tokenBalanceResponse = await axios.post(alchemyUrl, {
-				jsonrpc: "2.0",
-				id: 1,
-				method: "getTokenAccountsByOwner",
-				params: [
-					sheetOpenWallet.publicKey,
-					{ programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" },
-					{ encoding: "jsonParsed" }
-				]
-			});
-
-			let usdcAmount = 0;
-			let usdtAmount = 0;
-
-			const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-			const USDT_MINT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
-
-			tokenBalanceResponse.data.result.value.forEach((account: any) => {
-				const info = account.account.data.parsed.info;
-				if (info.mint === USDC_MINT) {
-					usdcAmount = info.tokenAmount.uiAmount || 0;
-				} else if (info.mint === USDT_MINT) {
-					usdtAmount = info.tokenAmount.uiAmount || 0;
-				}
-			});
-
-			setData({
-				sol: { tokenPrice: solPrice, tokenAmount: solBalance },
-				usdt: { tokenPrice: usdtPrice, tokenAmount: usdtAmount },
-				usdc: { tokenPrice: usdcPrice, tokenAmount: usdcAmount }
-			});
-		} catch (error: any) {
-			console.log('Error: ' + error);
-			const errorMessage = error.response?.data?.message || error.message || "Error fetching data";
-			toast.error(`Error: ${errorMessage}`);
-		} finally {
-			setLoading(false);
-		}
-	};
-
 	const handleOpenChange = (open: boolean) => {
 		if (!open) {
 			setSheetOpenWallet(null);
@@ -131,8 +93,9 @@ const SwapSheet = ({ sheetOpenWallet, setSheetOpenWallet }: SwapSheetProps) => {
 	};
 
 	const handleSolanaSend = async () => {
+		try {
 		setIsSendingToken(true);
-		const isValidPublicKey = PublicKey.isOnCurve(new PublicKey(recipientPublicKey).toBytes());
+		const isValidPublicKey = isValidSolanaAddress(recipientPublicKey)
 		if (data!.sol.tokenAmount < sendAmount){
 			toast.error('Insufficient balance');
 			return;
@@ -145,17 +108,13 @@ const SwapSheet = ({ sheetOpenWallet, setSheetOpenWallet }: SwapSheetProps) => {
 			toast.error('Public must a valid key');
 			return;
 		}
-		const fromKeypair = Keypair.fromSecretKey(new PublicKey(sheetOpenWallet!.publicKey).toBytes());
-		const lamportsToSend = 1_000_000;
-
-		try {
-			const connection = new Connection("http://localhost:8899", "confirmed");
+		const fromKeypair = Keypair.fromSecretKey(bs58.decode(sheetOpenWallet!.privateKey));
 
 			const transferTransaction = new Transaction().add(
 				SystemProgram.transfer({
 					fromPubkey: fromKeypair.publicKey,
 					toPubkey: new PublicKey(recipientPublicKey),
-					lamports: lamportsToSend * sendAmount
+					lamports: LAMPORTS_PER_SOL * sendAmount
 				})
 			);
 
@@ -164,12 +123,13 @@ const SwapSheet = ({ sheetOpenWallet, setSheetOpenWallet }: SwapSheetProps) => {
 				transferTransaction,
 				[fromKeypair]
 			);
+			console.log('Signature of transaction: ' + signature);
 			toast.success('Solana transferred successfully')
 		}catch (e){
 			console.log('Error while transfer: ' + e);
 			toast.error('Error while transfer! try again')
 		}finally {
-			setLoading(false);
+			setIsSendingToken(false);
 		}
 	}
 
@@ -273,11 +233,26 @@ const SwapSheet = ({ sheetOpenWallet, setSheetOpenWallet }: SwapSheetProps) => {
 				)}
 
 				<SheetFooter>
-					<Button variant='default' disabled={loading} onClick={() => {
-						toast.info('swap feature is in development')
-					}}>Swap</Button>
+					<Dialog>
+						<DialogTrigger asChild>
+							<Button variant="default" disabled={loading} className="w-full">
+								Swap
+							</Button>
+						</DialogTrigger>
+
+						<DialogContent className="sm:max-w-md">
+							<DialogHeader>
+								<DialogTitle>Swap Tokens</DialogTitle>
+								<DialogDescription>
+									Swap between your available tokens
+								</DialogDescription>
+							</DialogHeader>
+
+							{/*SwapUI*/}
+						</DialogContent>
+					</Dialog>
 					<SheetClose asChild>
-						<Button variant="outline">Close</Button>
+						<Button variant="outline" disabled={loading}>Close</Button>
 					</SheetClose>
 				</SheetFooter>
 			</SheetContent>
